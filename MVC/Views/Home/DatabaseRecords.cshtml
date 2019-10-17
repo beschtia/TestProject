@@ -1,0 +1,25 @@
+﻿@model DatabaseInfo
+
+@{
+    ViewData["Title"] = "Database Records";
+}
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>Records Count</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-3">
+            Number of Make records:
+        </dt>
+        <dd class="col-sm-9">
+            @Html.DisplayFor(model => model.MakeCount)
+        </dd>
+        <dt class="col-sm-3">
+            Number of Model records:
+        </dt>
+        <dd class="col-sm-9">
+            @Html.DisplayFor(model => model.ModelCount)
+        </dd>
+    </dl>
+</div>
