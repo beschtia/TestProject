@@ -9,6 +9,5 @@ namespace MVC.Models
     {
         public int MakeCount { get; set; }
         public int ModelCount { get; set; }
-
     }
 }

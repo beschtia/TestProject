@@ -30,8 +30,8 @@ namespace MVC.Controllers
         {
             var model = new DatabaseInfo()
             {
-                MakeCount = _vehicleService.MakeService.GetCountAsync().Result,
-                ModelCount = _vehicleService.ModelService.GetCountAsync().Result
+                MakeCount = _vehicleService.MakeRepository.GetCountAsync().Result,
+                ModelCount = _vehicleService.ModelRepository.GetCountAsync().Result
             };
             return View(model);
         }

@@ -1,4 +1,5 @@
-﻿@model X.PagedList.IPagedList<VehicleMakeViewModel>
+﻿@model MakesViewModel
+@using Microsoft.AspNetCore.Routing
 @using X.PagedList.Mvc.Core;
 
 <link href="~/css/PagedList.css" rel="stylesheet" type="text/css" />
@@ -15,26 +16,32 @@
 
 @using (Html.BeginForm("Index", "VehicleMakes", FormMethod.Get))
 {
-    <p>
-        Find: @Html.TextBox("SearchString", ViewBag.CurrentFilter as string)
-        <input type="submit" value="Search" />
-    </p>
+<p>
+    Find: <input asp-for="Filtering.Filter" />
+    <input type="hidden" asp-for="Paging.PageSize" />
+    <input type="submit" value="Search" />
+</p>
 }
-
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.ActionLink("Name", "Index", new {sortOrder = ViewBag.NameSortParm, currentFilter=ViewBag.CurrentFilter})
+                @Html.ActionLink("Name", "Index", new RouteValueDictionary {
+                        {"Sorting.SortParameter", Model.Sorting.SortParameter == "Name" ? "name_desc" : "Name" },
+                        {"Filtering.Filter", Model.Filtering.Filter },
+                        {"Paging.PageSize", Model.Paging.PageSize}})
             </th>
             <th>
-                @Html.ActionLink("Abrv", "Index", new {sortOrder = ViewBag.AbrvSortParm, currentFilter=ViewBag.CurrentFilter})
+                @Html.ActionLink("Name", "Index", new RouteValueDictionary {
+                        {"Sorting.SortParameter", Model.Sorting.SortParameter == "Abrv" ? "abrv_desc" : "Abrv" },
+                        {"Filtering.Filter", Model.Filtering.Filter },
+                        {"Paging.PageSize", Model.Paging.PageSize}})
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
+        @foreach (var item in Model.Makes)
         {
             <tr>
                 <td>
@@ -52,8 +59,23 @@
         }
     </tbody>
 </table>
-<br />
-Page @(Model.PageCount < Model.PageNumber ? 0 : Model.PageNumber) of @Model.PageCount
+<hr />
+@using (Html.BeginForm("Index", "VehicleMakes", FormMethod.Get))
+{
+    <p>
+        Page size: <select asp-for="Paging.PageSize" asp-items="ViewBag.PageSize"></select>
+        <input type="hidden" asp-for="Filtering.Filter" />
+        <input type="submit" value="Set" />
+    </p>
+}
+<div style="text-align:center">
+    @Html.PagedListPager(Model.Makes, page => Url.Action("Index",
+        new RouteValueDictionary {
+            {"Paging.Page", page},
+            {"Paging.PageSize", Model.Paging.PageSize},
+            {"Sorting.SortParameter", Model.Sorting.SortParameter},
+            {"Filtering.Filter", Model.Filtering.Filter}
+        }), X.PagedList.Mvc.Core.Common.PagedListRenderOptions.ClassicPlusFirstAndLast)
 
-@Html.PagedListPager(Model, page => Url.Action("Index",
-    new { page, sortOrder = ViewBag.CurrentSort, currentFilter = ViewBag.CurrentFilter}))
+    Page @(Model.Makes.PageCount < Model.Makes.PageNumber ? 0 : Model.Makes.PageNumber) of @Model.Makes.PageCount
+</div>

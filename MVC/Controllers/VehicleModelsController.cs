@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
@@ -24,59 +22,13 @@ namespace MVC.Controllers
             _mapper = mapper;
         }
 
-        public async Task<IActionResult> Index(int? page, int? selectedMakeId, string sortOrder, string searchString, int? currentFilter)
-        { 
-            ViewBag.CurrentSort = sortOrder;
-            ViewBag.NameSortParm = sortOrder == "Name" ? "name_desc" : "Name";
-            ViewBag.AbrvSortParm = sortOrder == "Abrv" ? "abrv_desc" : "Abrv";
-            ViewBag.MakeSortParm = sortOrder == "Make" ? "make_desc" : "Make";
-
-            int pageSize = 5;
-            int pageNumber = (page ?? 1);
-
-            if (selectedMakeId != null)
-            {
-                page = 1;
-            }
-            else
-            {
-                selectedMakeId = currentFilter;
-            }
-            ViewBag.CurrentFilter = selectedMakeId;
-
-            PopulateVehicleMakesDropDownList(selectedMakeId);            
-
-            Expression<Func<VehicleModel, bool>> filter = null;            
-            if (selectedMakeId != null)
-            {
-                filter = e => e.MakeId == selectedMakeId;
-            }
-
-            Func<IQueryable<VehicleModel>, IOrderedQueryable<VehicleModel>> orderBy = sortOrder switch
-            {
-                "Name" => q => q.OrderBy(e => e.Name),
-                "name_desc" => q => q.OrderByDescending(e => e.Name),
-                "Abrv" => q => q.OrderBy(e => e.Abrv),
-                "abrv_desc" => q => q.OrderByDescending(e => e.Abrv),
-                "Make" => q => q.OrderBy(e => e.Make.Name),
-                "make_desc" => q => q.OrderByDescending(e => e.Make.Name),
-                _ => null,
-            };
-
-            int totalItems = await _vehicleService.ModelService.GetCountAsync(filter);
-
-            var vehicleModels = await _vehicleService.ModelService.GetPageAsync(
-                pageNumber, pageSize, filter, orderBy, "Make");
-
-            var models = new List<VehicleModelViewModel>();
-            foreach (var vehicle in vehicleModels)
-            {
-                var viewModel = _mapper.Map<VehicleModelViewModel>(vehicle);
-                models.Add(viewModel);
-            }
-            
-            var pagedViewModel = new StaticPagedList<VehicleModelViewModel>(models, pageNumber, pageSize, totalItems);
-            return View(pagedViewModel);            
+        public async Task<IActionResult> Index(ModelsViewModel model)
+        {
+            PopulateMakesSelectList();
+            ViewData["PageSize"] = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 });
+            var models = await _vehicleService.GetPagedModels(model.Filtering, model.Sorting, model.Paging);
+            model.Models = _mapper.Map<IPagedList<VehicleModel>, IPagedList<VehicleModelViewModel>>(models);
+            return View(model);
         }
                 
         public async Task<IActionResult> Details(int? id)
@@ -86,7 +38,7 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleModel = await _vehicleService.ModelService.GetOneAsync(v => v.Id == id, "Make");
+            var vehicleModel = await _vehicleService.ModelRepository.GetOneAsync(v => v.Id == id, "Make");
             
             if (vehicleModel == null)
             {
@@ -99,7 +51,7 @@ namespace MVC.Controllers
         
         public IActionResult Create()
         {
-            PopulateVehicleMakesDropDownList();
+            PopulateMakesSelectList();
             return View();
         }
         
@@ -112,7 +64,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleModel = _mapper.Map<VehicleModel>(viewModel);
-                    _vehicleService.ModelService.Insert(vehicleModel);
+                    _vehicleService.ModelRepository.Insert(vehicleModel);
                     await _vehicleService.SaveAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -121,7 +73,7 @@ namespace MVC.Controllers
             {
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
             }
-            PopulateVehicleMakesDropDownList(viewModel.MakeId);
+            PopulateMakesSelectList(viewModel.MakeId);
             return View(viewModel);
         }
 
@@ -132,13 +84,13 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleModel = await _vehicleService.ModelService.GetByIdAsync(id);
+            var vehicleModel = await _vehicleService.ModelRepository.GetByIdAsync(id);
             if (vehicleModel == null)
             {
                 return NotFound();
             }
             var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModel);
-            PopulateVehicleMakesDropDownList(viewModel.MakeId);
+            PopulateMakesSelectList(viewModel.MakeId);
             return View(viewModel);
         }
 
@@ -151,7 +103,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleModel = _mapper.Map<VehicleModel>(viewModel);
-                    _vehicleService.ModelService.Update(vehicleModel);
+                    _vehicleService.ModelRepository.Update(vehicleModel);
                     await _vehicleService.SaveAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -160,7 +112,7 @@ namespace MVC.Controllers
             {
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists, see your system administrator.");
             }
-            PopulateVehicleMakesDropDownList(viewModel.MakeId);
+            PopulateMakesSelectList(viewModel.MakeId);
             return View(viewModel);            
         }
 
@@ -174,7 +126,7 @@ namespace MVC.Controllers
             {
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
-            var vehicleModel = await _vehicleService.ModelService.GetOneAsync(v => v.Id == id, "Make");
+            var vehicleModel = await _vehicleService.ModelRepository.GetOneAsync(v => v.Id == id, "Make");
             if (vehicleModel == null)
             {
                 return NotFound();
@@ -189,8 +141,8 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleModel = await _vehicleService.ModelService.GetByIdAsync(id);
-                _vehicleService.ModelService.DeleteAsync(id);
+                var vehicleModel = await _vehicleService.ModelRepository.GetByIdAsync(id);
+                _vehicleService.ModelRepository.DeleteAsync(id);
                 await _vehicleService.SaveAsync();
             }
             catch (Exception)
@@ -199,17 +151,12 @@ namespace MVC.Controllers
             }
             return RedirectToAction("Index");
         }
-        
-        private void PopulateVehicleMakesDropDownList(object selectedVehicleMake = null)
+
+        private void PopulateMakesSelectList(object selectedVehicleMake = null)
         {
-            var makes = _vehicleService.MakeService.GetAllAsync(q => q.OrderBy(e => e.Name)).Result;
-            var items = new List<VehicleMakeDropListModel>();
-            foreach (var make in makes)
-            {
-                var model = _mapper.Map<VehicleMakeDropListModel>(make);
-                items.Add(model);
-            }
-            ViewData["MakeId"] = new SelectList(items, "Id", "Name", selectedVehicleMake);
+            var makes = _vehicleService.GetVehicleMakesDropDownList().Result;
+            var items = _mapper.Map<IEnumerable<VehicleMakeDropListModel>>(makes);
+            ViewData["MakesSelectList"] = new SelectList(items, "Id", "Name", selectedVehicleMake);
         }
 
         protected override void Dispose(bool disposing)

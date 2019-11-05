@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace Service
+namespace Service.DAL
 {
     public partial class ProjectContext : DbContext
     {

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using MVC.Models;
 using Service;
 using Service.DAL;
@@ -23,55 +21,12 @@ namespace MVC.Controllers
             _mapper = mapper;
         }
 
-        public async Task<IActionResult> Index(int? page, string sortOrder, string searchString, string currentFilter)
+        public async Task<IActionResult> Index(MakesViewModel model)
         {
-            ViewBag.CurrentSort = sortOrder;
-            ViewBag.NameSortParm = sortOrder == "Name" ? "name_desc" : "Name";
-            ViewBag.AbrvSortParm = sortOrder == "Abrv" ? "abrv_desc" : "Abrv";
-
-            int pageSize = 5;
-            int pageNumber = (page ?? 1);
-
-            if (searchString != null)
-            {
-                page = 1;
-            }
-            else
-            {
-                searchString = currentFilter;
-            }
-            ViewBag.CurrentFilter = searchString;
-
-            Expression<Func<VehicleMake, bool>> filter = null;
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                filter = e => e.Name.ToUpper().Contains(searchString.ToUpper()) ||
-                                e.Abrv.ToUpper().Contains(searchString.ToUpper());
-            }
-
-            Func<IQueryable<VehicleMake>, IOrderedQueryable<VehicleMake>> orderBy = sortOrder switch
-            {
-                "Name" => q => q.OrderBy(s => s.Name),
-                "name_desc" => q => q.OrderByDescending(s => s.Name),
-                "Abrv" => q => q.OrderBy(s => s.Abrv),
-                "abrv_desc" => q => q.OrderByDescending(s => s.Abrv),
-                _ => null,
-            };
-
-            int totalItems = await _vehicleService.MakeService.GetCountAsync(filter);
-
-            var vehicleMakes = await _vehicleService.MakeService.GetPageAsync(
-                pageNumber, pageSize, filter, orderBy);
-
-            var makes = new List<VehicleMakeViewModel>();
-            foreach (var make in vehicleMakes)
-            {
-                var viewModel = _mapper.Map<VehicleMakeViewModel>(make);
-                makes.Add(viewModel);
-            }
-
-            var pagedViewModel = new StaticPagedList<VehicleMakeViewModel>(makes, pageNumber, pageSize, totalItems);
-            return View(pagedViewModel);
+            ViewData["PageSize"] = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 });
+            var makes = await _vehicleService.GetPagedMakes(model.Filtering, model.Sorting, model.Paging);
+            model.Makes = _mapper.Map<IPagedList<VehicleMake>, IPagedList<VehicleMakeViewModel>>(makes);
+            return View(model);
         }
 
         public async Task<IActionResult> Details(int? id)
@@ -82,7 +37,7 @@ namespace MVC.Controllers
             }
 
 
-            var vehicleMake = await _vehicleService.MakeService.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
 
             if (vehicleMake == null)
             {
@@ -106,7 +61,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleMake = _mapper.Map<VehicleMake>(viewModel);
-                    _vehicleService.MakeService.Insert(vehicleMake);
+                    _vehicleService.MakeRepository.Insert(vehicleMake);
                     await _vehicleService.SaveAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -126,7 +81,7 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleMake = await _vehicleService.MakeService.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
             if (vehicleMake == null)
             {
                 return NotFound();
@@ -144,7 +99,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleMake = _mapper.Map<VehicleMake>(viewModel);
-                    _vehicleService.MakeService.Update(vehicleMake);
+                    _vehicleService.MakeRepository.Update(vehicleMake);
                     await _vehicleService.SaveAsync();
                     return RedirectToAction("Index");
                 }
@@ -168,7 +123,7 @@ namespace MVC.Controllers
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
 
-            var vehicleMake = await _vehicleService.MakeService.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
             if (vehicleMake == null)
             {
                 return NotFound();
@@ -183,8 +138,8 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleMake = await _vehicleService.MakeService.GetByIdAsync(id);
-                _vehicleService.MakeService.DeleteAsync(id);
+                var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+                _vehicleService.MakeRepository.DeleteAsync(id);
                 await _vehicleService.SaveAsync();
             }
             catch (Exception)

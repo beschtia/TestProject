@@ -3,16 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading.Tasks;
+using X.PagedList;
 
 namespace Service.DAL
 {
-    public class GenericService<TEntity> : IGenericService<TEntity> where TEntity : class
+    public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
     {
         private readonly ProjectContext dbContext;
         private readonly DbSet<TEntity> dbSet;
-        
-        public GenericService(ProjectContext dbContext)
+
+        public GenericRepository(ProjectContext dbContext)
         {
             this.dbContext = dbContext;
             this.dbSet = dbContext.Set<TEntity>();
@@ -31,7 +33,7 @@ namespace Service.DAL
             if (filter != null)
             {
                 query = query.Where(filter);
-                
+
             }
 
             foreach (var includeProperty in includeProperties.Split
@@ -84,6 +86,19 @@ namespace Service.DAL
                 pageSize * (pageNumber - 1), pageSize).ToListAsync();
         }
 
+        public virtual async Task<IPagedList<TEntity>> GetPagedAsync(
+            int pageNumber,
+            int pageSize,
+            Expression<Func<TEntity, bool>> filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+            string includeProperties = null)
+        {
+            var count = GetQueryable(filter).CountAsync().Result;
+            var entities = await GetQueryable(filter, orderBy, includeProperties,
+                pageSize * (pageNumber - 1), pageSize).ToListAsync();
+            return new StaticPagedList<TEntity>(entities, pageNumber, pageSize, count);
+        }
+
         public virtual async Task<TEntity> GetOneAsync(
         Expression<Func<TEntity, bool>> filter,
         string includeProperties = null)
@@ -125,7 +140,6 @@ namespace Service.DAL
         {
             dbSet.Attach(entityToUpdate);
             dbContext.Entry(entityToUpdate).State = EntityState.Modified;
-        }        
+        }
     }
 }
-
