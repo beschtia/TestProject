@@ -1,4 +1,7 @@
-﻿using Service.Models;
+﻿using AutoMapper;
+using Service.AutoMapper;
+using Service.EFModels;
+using Service.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +17,11 @@ namespace Service.DAL
         private readonly ProjectContext dbContext;
         private IGenericRepository<VehicleMake> makeRepository;
         private IGenericRepository<VehicleModel> modelRepository;
+        private readonly IMapper mapper = new Mapper(
+            new MapperConfiguration(cfg => {
+                cfg.AddProfile<ServiceMapProfile>();
+            }));
+
 
         public VehicleService(ProjectContext dbContext)
         {
@@ -44,10 +52,10 @@ namespace Service.DAL
             }
         }
 
-        public async Task<IPagedList<VehicleMake>> GetPagedMakes(FilteringModel filterModel, SortingModel sortingModel, PagingModel pagingModel)
+        public async Task<IPagedList<IVehicleMake>> GetPagedMakes(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
         {
             Expression<Func<VehicleMake, bool>> filter = null;
-            if (filterModel != null && !string.IsNullOrEmpty(filterModel.Filter))
+            if (!string.IsNullOrWhiteSpace(filterModel.Filter))
             {
                 filter = e => e.Name.ToUpper().Contains(filterModel.Filter.ToUpper()) ||
                                 e.Abrv.ToUpper().Contains(filterModel.Filter.ToUpper());
@@ -65,7 +73,7 @@ namespace Service.DAL
             return await MakeRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy);
         }
 
-        public async Task<IPagedList<VehicleModel>> GetPagedModels(FilteringModel filterModel, SortingModel sortingModel, PagingModel pagingModel)
+        public async Task<IPagedList<IVehicleModel>> GetPagedModels(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
         {
             Expression<Func<VehicleModel, bool>> filter = null;
             if (filterModel.FilterById != null)
@@ -87,13 +95,44 @@ namespace Service.DAL
             return await ModelRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy, "Make");
         }
 
-        public async Task<IEnumerable<VehicleMake>> GetVehicleMakesDropDownList()
+        public async Task<IVehicleMake> GetMakeByIdAsync(object id)
         {
-            return await MakeRepository.GetAllAsync(q => q.OrderBy(e => e.Name));
+            return await MakeRepository.GetByIdAsync(id);
         }
-        public async Task<int> SaveAsync()
+
+        public void InsertMake(IVehicleMake makeDTO)
         {
-            return await dbContext.SaveChangesAsync();
+            MakeRepository.Insert(mapper.Map<VehicleMake>(makeDTO));
+        }
+
+        public void UpdateMake(IVehicleMake makeDTO)
+        {
+            MakeRepository.Update(mapper.Map<VehicleMake>(makeDTO));
+        }
+
+        public async Task<IEnumerable<IVehicleMake>> GetMakes()
+        {
+            return await MakeRepository.GetAllAsync();
+        }
+
+        public async Task<IVehicleModel> GetModelByIdAsync(int id)
+        {
+            return await ModelRepository.GetOneAsync(v => v.Id == id, "Make");
+        }
+
+        public void InsertModel(IVehicleModel modelDTO)
+        {
+            ModelRepository.Insert(mapper.Map<VehicleModel>(modelDTO));
+        }
+
+        public void UpdateModel(IVehicleModel modelDTO)
+        {
+            ModelRepository.Update(mapper.Map<VehicleModel>(modelDTO));
+        }
+
+        public async Task SaveAsync()
+        {
+            await dbContext.SaveChangesAsync();
         }
 
         private bool disposed = false;
@@ -114,6 +153,6 @@ namespace Service.DAL
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
+        }        
     }
 }

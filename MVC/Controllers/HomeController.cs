@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MVC.Models;
+using MVC.ViewModels;
 using Service.DAL;
 
 namespace MVC.Controllers
@@ -26,12 +28,12 @@ namespace MVC.Controllers
             return View();
         }
 
-        public IActionResult DatabaseRecords()
+        public async Task<IActionResult> DatabaseRecords()
         {
-            var model = new DatabaseInfo()
+            var model = new DatabaseInfoViewModel()
             {
-                MakeCount = _vehicleService.MakeRepository.GetCountAsync().Result,
-                ModelCount = _vehicleService.ModelRepository.GetCountAsync().Result
+                MakeCount = await _vehicleService.MakeRepository.GetCountAsync(),
+                ModelCount = await _vehicleService.ModelRepository.GetCountAsync()
             };
             return View(model);
         }

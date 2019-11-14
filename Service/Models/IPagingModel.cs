@@ -4,8 +4,9 @@ using System.Text;
 
 namespace Service.Models
 {
-    public class SortingModel
+    public interface IPagingModel
     {
-        public string SortParameter { get; set; }        
+        int PageSize { get; set; }
+        int Page { get; set; }
     }
 }

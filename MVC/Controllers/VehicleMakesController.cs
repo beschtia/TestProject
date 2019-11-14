@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using MVC.Models;
-using Service;
+using MVC.ViewModels;
 using Service.DAL;
+using Service.EFModels;
 using X.PagedList;
 
 namespace MVC.Controllers
@@ -21,31 +24,39 @@ namespace MVC.Controllers
             _mapper = mapper;
         }
 
-        public async Task<IActionResult> Index(MakesViewModel model)
+        public async Task<IActionResult> Index(FilteringModel filtering, SortingModel sorting, PagingModel paging)
         {
-            ViewData["PageSize"] = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 });
-            var makes = await _vehicleService.GetPagedMakes(model.Filtering, model.Sorting, model.Paging);
-            model.Makes = _mapper.Map<IPagedList<VehicleMake>, IPagedList<VehicleMakeViewModel>>(makes);
-            return View(model);
+            ViewBag.Filter = filtering;
+            ViewBag.Sort = sorting;
+            ViewBag.Paging = paging;
+            ViewBag.PageSize = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 }, paging.PageSize);
+
+            var makes = await _vehicleService.GetPagedMakes(filtering, sorting, paging);
+            if (makes.TotalItemCount == 0)
+            {
+                Response.StatusCode = (int)HttpStatusCode.NotFound;
+            }
+            var viewModel = _mapper.Map<IPagedList<IVehicleMake>, IPagedList<VehicleMakeViewModel>>(makes);
+            return View(viewModel);            
         }
 
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
-            {                
+            {
                 return BadRequest();
             }
 
-
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
-
-            if (vehicleMake == null)
+            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
+            if (vehicleMakeDTO == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
+
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
             return View(viewModel);
         }
+
         public IActionResult Create()
         {
             return View();
@@ -54,40 +65,39 @@ namespace MVC.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Name, Abrv")] VehicleMakeViewModel viewModel)
-        {
-           
+        {           
             try
             {
                 if (ModelState.IsValid)
                 {
-                    var vehicleMake = _mapper.Map<VehicleMake>(viewModel);
-                    _vehicleService.MakeRepository.Insert(vehicleMake);
+                    var vehicleMakeDTO = _mapper.Map<IVehicleMake>(viewModel);
+                    _vehicleService.InsertMake(vehicleMakeDTO);
                     await _vehicleService.SaveAsync();
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction("Index");
                 }
             }
-            catch (Exception)
+            catch (DbUpdateException)
             {
-                ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists see your system administrator.");
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                ModelState.AddModelError("", "Unable to save. Try again, and if the problem persists see your system administrator.");
             }
             return View(viewModel);
         }
-
+       
         public async Task<IActionResult> Edit(int? id)
         {
-
             if (id == null)
             {
                 return BadRequest();
             }
 
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
-            if (vehicleMake == null)
+            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
+            if (vehicleMakeDTO == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
-            return View(viewModel);
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
+            return View(viewModel);           
         }
 
         [HttpPost]
@@ -98,17 +108,17 @@ namespace MVC.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    var vehicleMake = _mapper.Map<VehicleMake>(viewModel);
-                    _vehicleService.MakeRepository.Update(vehicleMake);
+                    var vehicleMakeDTO = _mapper.Map<IVehicleMake>(viewModel);
+                    _vehicleService.UpdateMake(vehicleMakeDTO);
                     await _vehicleService.SaveAsync();
                     return RedirectToAction("Index");
                 }
             }
-            catch (Exception)
+            catch (DbUpdateException)
             {
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists, see your system administrator.");
-            }
-
+            }           
             return View(viewModel);
         }
 
@@ -120,16 +130,16 @@ namespace MVC.Controllers
             }
             if (saveChangesError.GetValueOrDefault())
             {
+                Response.StatusCode = (int)HttpStatusCode.Conflict;
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
-
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
-            if (vehicleMake == null)
+            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
+            if (vehicleMakeDTO == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
-            return View(viewModel);
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
+            return View(viewModel);  
         }
 
         [HttpPost]
@@ -138,11 +148,15 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
-                _vehicleService.MakeRepository.DeleteAsync(id);
+                var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
+                if (vehicleMakeDTO == null)
+                {
+                    return NotFound();
+                }
+                await _vehicleService.MakeRepository.DeleteAsync(id);
                 await _vehicleService.SaveAsync();
-            }
-            catch (Exception)
+            }         
+            catch (DbUpdateException)
             {
                 return RedirectToAction("Delete", new { id, saveChangesError = true });
             }

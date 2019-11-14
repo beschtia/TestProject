@@ -13,19 +13,7 @@ namespace Service.DAL
         Task<IEnumerable<TEntity>> GetAllAsync(
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null);
-
-        Task<IEnumerable<TEntity>> GetAsync(
-            Expression<Func<TEntity, bool>> filter,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = null);
-
-        Task<IEnumerable<TEntity>> GetPageAsync(
-            int pageNumber,
-            int pageSize,
-            Expression<Func<TEntity, bool>> filter = null,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = null);
-
+               
         Task<IPagedList<TEntity>> GetPagedAsync(
             int pageNumber,
             int pageSize,
@@ -43,7 +31,7 @@ namespace Service.DAL
 
         void Insert(TEntity entity);
 
-        void DeleteAsync(object id);
+        Task DeleteAsync(object id);
 
         void Update(TEntity entityToUpdate);
     }

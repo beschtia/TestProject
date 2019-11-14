@@ -17,10 +17,10 @@ namespace Service.DAL
         public GenericRepository(ProjectContext dbContext)
         {
             this.dbContext = dbContext;
-            this.dbSet = dbContext.Set<TEntity>();
+            dbSet = dbContext.Set<TEntity>();
         }
 
-        protected virtual IQueryable<TEntity> GetQueryable(
+        private IQueryable<TEntity> GetQueryable(
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null,
@@ -60,74 +60,55 @@ namespace Service.DAL
             return query;
         }
 
-        public virtual async Task<IEnumerable<TEntity>> GetAllAsync(
+        public async Task<IEnumerable<TEntity>> GetAllAsync(
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null)
         {
             return await GetQueryable(null, orderBy, includeProperties).ToListAsync();
         }
-
-        public virtual async Task<IEnumerable<TEntity>> GetAsync(
-            Expression<Func<TEntity, bool>> filter,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = null)
-        {
-            return await GetQueryable(filter, orderBy, includeProperties).ToListAsync();
-        }
-
-        public virtual async Task<IEnumerable<TEntity>> GetPageAsync(
+        
+        public async Task<IPagedList<TEntity>> GetPagedAsync(
             int pageNumber,
             int pageSize,
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null)
         {
-            return await GetQueryable(filter, orderBy, includeProperties,
-                pageSize * (pageNumber - 1), pageSize).ToListAsync();
-        }
-
-        public virtual async Task<IPagedList<TEntity>> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            Expression<Func<TEntity, bool>> filter = null,
-            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = null)
-        {
-            var count = GetQueryable(filter).CountAsync().Result;
+            var count = await GetQueryable(filter).CountAsync();
             var entities = await GetQueryable(filter, orderBy, includeProperties,
                 pageSize * (pageNumber - 1), pageSize).ToListAsync();
             return new StaticPagedList<TEntity>(entities, pageNumber, pageSize, count);
         }
 
-        public virtual async Task<TEntity> GetOneAsync(
+        public async Task<TEntity> GetOneAsync(
         Expression<Func<TEntity, bool>> filter,
         string includeProperties = null)
         {
             return await GetQueryable(filter, null, includeProperties).SingleOrDefaultAsync();
         }
 
-        public virtual async Task<TEntity> GetByIdAsync(object id)
-        {
+        public async Task<TEntity> GetByIdAsync(object id)
+        {            
             return await dbSet.FindAsync(id);
         }
 
-        public virtual Task<int> GetCountAsync(Expression<Func<TEntity, bool>> filter = null)
+        public async Task<int> GetCountAsync(Expression<Func<TEntity, bool>> filter = null)
         {
-            return GetQueryable(filter).CountAsync();
+            return await GetQueryable(filter).CountAsync();
         }
 
-        public virtual void Insert(TEntity entity)
+        public void Insert(TEntity entity)
         {
             dbSet.Add(entity);
         }
 
-        public async virtual void DeleteAsync(object id)
+        public async Task DeleteAsync(object id)
         {
             TEntity entityToDelete = await dbSet.FindAsync(id);
             Delete(entityToDelete);
         }
 
-        public virtual void Delete(TEntity entityToDelete)
+        private void Delete(TEntity entityToDelete)
         {
             if (dbContext.Entry(entityToDelete).State == EntityState.Detached)
             {
@@ -136,7 +117,7 @@ namespace Service.DAL
             dbSet.Remove(entityToDelete);
         }
 
-        public virtual void Update(TEntity entityToUpdate)
+        public void Update(TEntity entityToUpdate)
         {
             dbSet.Attach(entityToUpdate);
             dbContext.Entry(entityToUpdate).State = EntityState.Modified;

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Service.EFModels;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Service
 {
-    public partial class VehicleMake
+    public partial class VehicleMake : IVehicleMake
     {
         public VehicleMake()
         {
