@@ -10,7 +10,7 @@ namespace Service.DAL
 {
     public interface IGenericRepository<TEntity> where TEntity : class
     {
-        Task<IEnumerable<TEntity>> GetAllAsync(
+        Task<List<TEntity>> GetAllAsync(
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null);
                
@@ -20,19 +20,13 @@ namespace Service.DAL
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null);
-
         Task<TEntity> GetOneAsync(
-        Expression<Func<TEntity, bool>> filter,
-        string includeProperties = null);
-
-        Task<TEntity> GetByIdAsync(object id);
-
+            Expression<Func<TEntity, bool>> filter,
+            string includeProperties = null);
+        ValueTask<TEntity> GetByIdAsync(object id);
         Task<int> GetCountAsync(Expression<Func<TEntity, bool>> filter = null);
-
-        void Insert(TEntity entity);
-
-        Task DeleteAsync(object id);
-
-        void Update(TEntity entityToUpdate);
+        Task InsertAsync(TEntity entity);
+        Task DeleteAsync(TEntity entityToDelete);
+        Task UpdateAsync(TEntity entityToUpdate);
     }
 }

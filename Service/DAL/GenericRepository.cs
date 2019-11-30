@@ -60,11 +60,11 @@ namespace Service.DAL
             return query;
         }
 
-        public async Task<IEnumerable<TEntity>> GetAllAsync(
+        public Task<List<TEntity>> GetAllAsync(
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null)
         {
-            return await GetQueryable(null, orderBy, includeProperties).ToListAsync();
+            return GetQueryable(null, orderBy, includeProperties).AsNoTracking().ToListAsync();
         }
         
         public async Task<IPagedList<TEntity>> GetPagedAsync(
@@ -76,51 +76,44 @@ namespace Service.DAL
         {
             var count = await GetQueryable(filter).CountAsync();
             var entities = await GetQueryable(filter, orderBy, includeProperties,
-                pageSize * (pageNumber - 1), pageSize).ToListAsync();
+                pageSize * (pageNumber - 1), pageSize).AsNoTracking().ToListAsync();
             return new StaticPagedList<TEntity>(entities, pageNumber, pageSize, count);
         }
 
-        public async Task<TEntity> GetOneAsync(
+        public Task<TEntity> GetOneAsync(
         Expression<Func<TEntity, bool>> filter,
         string includeProperties = null)
         {
-            return await GetQueryable(filter, null, includeProperties).SingleOrDefaultAsync();
+            return GetQueryable(filter, null, includeProperties).SingleOrDefaultAsync();
         }
 
-        public async Task<TEntity> GetByIdAsync(object id)
+        public ValueTask<TEntity> GetByIdAsync(object id)
         {            
-            return await dbSet.FindAsync(id);
+            return dbSet.FindAsync(id);
         }
 
-        public async Task<int> GetCountAsync(Expression<Func<TEntity, bool>> filter = null)
+        public Task<int> GetCountAsync(Expression<Func<TEntity, bool>> filter = null)
         {
-            return await GetQueryable(filter).CountAsync();
+            return GetQueryable(filter).CountAsync();
         }
 
-        public void Insert(TEntity entity)
-        {
+        public Task InsertAsync(TEntity entity)
+        {            
             dbSet.Add(entity);
+            return dbContext.SaveChangesAsync();
         }
-
-        public async Task DeleteAsync(object id)
+        
+        public Task DeleteAsync(TEntity entityToDelete)
         {
-            TEntity entityToDelete = await dbSet.FindAsync(id);
-            Delete(entityToDelete);
-        }
-
-        private void Delete(TEntity entityToDelete)
-        {
-            if (dbContext.Entry(entityToDelete).State == EntityState.Detached)
-            {
-                dbSet.Attach(entityToDelete);
-            }
             dbSet.Remove(entityToDelete);
+            return dbContext.SaveChangesAsync();
         }
 
-        public void Update(TEntity entityToUpdate)
+        public Task UpdateAsync(TEntity entityToUpdate)
         {
             dbSet.Attach(entityToUpdate);
             dbContext.Entry(entityToUpdate).State = EntityState.Modified;
+            return dbContext.SaveChangesAsync();
         }
     }
 }

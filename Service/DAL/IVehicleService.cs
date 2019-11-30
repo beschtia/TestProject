@@ -12,17 +12,15 @@ namespace Service.DAL
     {
         IGenericRepository<VehicleMake> MakeRepository { get; }
         IGenericRepository<VehicleModel> ModelRepository { get; }
-        Task<IPagedList<IVehicleMake>> GetPagedMakes(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel);
-        Task<IVehicleMake> GetMakeByIdAsync(object id);
-        void InsertMake(IVehicleMake makeDTO);
-        void UpdateMake(IVehicleMake makeDTO);
-        Task<IEnumerable<IVehicleMake>> GetMakes();
+        Task<IPagedList<VehicleMake>> GetPagedMakesAsync(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel);
+        Task InsertMakeAsync(IVehicleMake makeDTO);
+        Task UpdateMakeAsync(IVehicleMake makeDTO);
 
-        Task<IPagedList<IVehicleModel>> GetPagedModels(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel);        
-        Task<IVehicleModel> GetModelByIdAsync(int id);
-        void InsertModel(IVehicleModel modelDTO);
-        void UpdateModel(IVehicleModel modelDTO);
-        Task SaveAsync();
+        Task<IPagedList<VehicleModel>> GetPagedModelsAsync(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel);
+        Task<VehicleModel> GetModelWithDetailsAsync(int id);
+        Task InsertModelAsync(IVehicleModel modelDTO);
+        Task UpdateModelAsync(IVehicleModel modelDTO);
+
         void Dispose();
 
     }

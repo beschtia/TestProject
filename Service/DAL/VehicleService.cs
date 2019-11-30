@@ -52,7 +52,7 @@ namespace Service.DAL
             }
         }
 
-        public async Task<IPagedList<IVehicleMake>> GetPagedMakes(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
+        public Task<IPagedList<VehicleMake>> GetPagedMakesAsync(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
         {
             Expression<Func<VehicleMake, bool>> filter = null;
             if (!string.IsNullOrWhiteSpace(filterModel.Filter))
@@ -70,10 +70,10 @@ namespace Service.DAL
                 _ => null,
             };
 
-            return await MakeRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy);
+            return MakeRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy);
         }
 
-        public async Task<IPagedList<IVehicleModel>> GetPagedModels(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
+        public Task<IPagedList<VehicleModel>> GetPagedModelsAsync(IFilteringModel filterModel, ISortingModel sortingModel, IPagingModel pagingModel)
         {
             Expression<Func<VehicleModel, bool>> filter = null;
             if (filterModel.FilterById != null)
@@ -92,49 +92,34 @@ namespace Service.DAL
                 _ => null,
             };
 
-            return await ModelRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy, "Make");
+            return ModelRepository.GetPagedAsync(pagingModel.Page, pagingModel.PageSize, filter, orderBy, "Make");
         }
 
-        public async Task<IVehicleMake> GetMakeByIdAsync(object id)
+        public Task InsertMakeAsync(IVehicleMake makeDTO)
         {
-            return await MakeRepository.GetByIdAsync(id);
+           return MakeRepository.InsertAsync(mapper.Map<VehicleMake>(makeDTO));
         }
 
-        public void InsertMake(IVehicleMake makeDTO)
+        public Task UpdateMakeAsync(IVehicleMake makeDTO)
         {
-            MakeRepository.Insert(mapper.Map<VehicleMake>(makeDTO));
+            return MakeRepository.UpdateAsync(mapper.Map<VehicleMake>(makeDTO));
         }
 
-        public void UpdateMake(IVehicleMake makeDTO)
+        public Task<VehicleModel> GetModelWithDetailsAsync(int id)
         {
-            MakeRepository.Update(mapper.Map<VehicleMake>(makeDTO));
+            return ModelRepository.GetOneAsync(e => e.Id == id, "Make");
         }
 
-        public async Task<IEnumerable<IVehicleMake>> GetMakes()
+        public Task InsertModelAsync(IVehicleModel modelDTO)
         {
-            return await MakeRepository.GetAllAsync();
+            return ModelRepository.InsertAsync(mapper.Map<VehicleModel>(modelDTO));
         }
 
-        public async Task<IVehicleModel> GetModelByIdAsync(int id)
+        public Task UpdateModelAsync(IVehicleModel modelDTO)
         {
-            return await ModelRepository.GetOneAsync(v => v.Id == id, "Make");
+            return ModelRepository.UpdateAsync(mapper.Map<VehicleModel>(modelDTO));
         }
-
-        public void InsertModel(IVehicleModel modelDTO)
-        {
-            ModelRepository.Insert(mapper.Map<VehicleModel>(modelDTO));
-        }
-
-        public void UpdateModel(IVehicleModel modelDTO)
-        {
-            ModelRepository.Update(mapper.Map<VehicleModel>(modelDTO));
-        }
-
-        public async Task SaveAsync()
-        {
-            await dbContext.SaveChangesAsync();
-        }
-
+        
         private bool disposed = false;
 
         protected virtual void Dispose(bool disposing)

@@ -33,12 +33,8 @@ namespace MVC.Controllers
             ViewBag.Paging = paging;
             ViewBag.PageSize = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 }, paging.PageSize);
 
-            await PopulateMakesSelectList(filtering.FilterById);
-            var models = await _vehicleService.GetPagedModels(filtering, sorting, paging);
-            if (models.TotalItemCount == 0)
-            {
-                Response.StatusCode = (int)HttpStatusCode.NotFound;
-            }
+            await PopulateMakesSelectListAsync(filtering.FilterById);
+            var models = await _vehicleService.GetPagedModelsAsync(filtering, sorting, paging);
             var viewModel = _mapper.Map<IPagedList<IVehicleModel>, IPagedList<VehicleModelViewModel>>(models);
             return View(viewModel);            
         }
@@ -50,18 +46,18 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleModelDTO = await _vehicleService.GetModelByIdAsync(id.GetValueOrDefault());
-            if (vehicleModelDTO == null)
+            var vehicleModel = await _vehicleService.GetModelWithDetailsAsync(id.GetValueOrDefault());
+            if (vehicleModel == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModelDTO);
+            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModel);
             return View(viewModel);
         }
         
         public async Task<IActionResult> Create()
         {
-            await PopulateMakesSelectList();
+            await PopulateMakesSelectListAsync();
             return View();
         }
         
@@ -74,8 +70,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleModelDTO = _mapper.Map<IVehicleModel>(viewModel);
-                    _vehicleService.InsertModel(vehicleModelDTO);
-                    await _vehicleService.SaveAsync();
+                    await _vehicleService.InsertModelAsync(vehicleModelDTO);
                     return RedirectToAction("Index");
                 }
             }
@@ -84,7 +79,7 @@ namespace MVC.Controllers
                 Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ModelState.AddModelError("", "Unable to save. Try again, and if the problem persists see your system administrator.");
             }    
-            await PopulateMakesSelectList(viewModel.MakeId);
+            await PopulateMakesSelectListAsync(viewModel.MakeId);
             return View(viewModel);
         }
 
@@ -95,13 +90,13 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleModelDTO = await _vehicleService.GetModelByIdAsync(id.GetValueOrDefault());
-            if (vehicleModelDTO == null)
+            var vehicleModel = await _vehicleService.GetModelWithDetailsAsync(id.GetValueOrDefault());
+            if (vehicleModel == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModelDTO);
-            await PopulateMakesSelectList(viewModel.MakeId);
+            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModel);
+            await PopulateMakesSelectListAsync(viewModel.MakeId);
             return View(viewModel);            
         }
 
@@ -110,12 +105,11 @@ namespace MVC.Controllers
         public async Task<IActionResult> Edit(VehicleModelViewModel viewModel)
         {
             try
-            {
+            {                
                 if (ModelState.IsValid)
                 {
                     var vehicleModelDTO = _mapper.Map<IVehicleModel>(viewModel);
-                    _vehicleService.UpdateModel(vehicleModelDTO);
-                    await _vehicleService.SaveAsync();
+                    await _vehicleService.UpdateModelAsync(vehicleModelDTO);
                     return RedirectToAction("Index");
                 }
             }
@@ -124,7 +118,7 @@ namespace MVC.Controllers
                 Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists, see your system administrator.");
             }
-            await PopulateMakesSelectList(viewModel.MakeId);
+            await PopulateMakesSelectListAsync(viewModel.MakeId);
             return View(viewModel);            
         }
 
@@ -136,15 +130,15 @@ namespace MVC.Controllers
             }
             if (saveChangesError.GetValueOrDefault())
             {
-                Response.StatusCode = (int)HttpStatusCode.Conflict;
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
-            var vehicleModelDTO = await _vehicleService.GetModelByIdAsync(id.GetValueOrDefault());
-            if (vehicleModelDTO == null)
+            var vehicleModel = await _vehicleService.GetModelWithDetailsAsync(id.GetValueOrDefault());
+            if (vehicleModel == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModelDTO);
+            var viewModel = _mapper.Map<VehicleModelViewModel>(vehicleModel);
             return View(viewModel);            
         }
 
@@ -154,13 +148,12 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleModelDTO = await _vehicleService.GetModelByIdAsync(id);
-                if (vehicleModelDTO == null)
+                var vehicleModel = await _vehicleService.ModelRepository.GetByIdAsync(id);
+                if (vehicleModel == null)
                 {
                     return NotFound();
                 }
-                await _vehicleService.ModelRepository.DeleteAsync(id);
-                await _vehicleService.SaveAsync();
+                await _vehicleService.ModelRepository.DeleteAsync(vehicleModel);
             }
             catch (DbUpdateException)
             {
@@ -169,10 +162,9 @@ namespace MVC.Controllers
             return RedirectToAction("Index");
         }
 
-        private async Task PopulateMakesSelectList(object selectedVehicleMake = null)
+        private async Task PopulateMakesSelectListAsync(object selectedVehicleMake = null)
         {
-            var makesDTO = await _vehicleService.GetMakes();
-            var items = _mapper.Map<IEnumerable<VehicleMakeDropListModel>>(makesDTO);
+            var items = _mapper.Map<IEnumerable<VehicleMakeDropListModel>>(await _vehicleService.MakeRepository.GetAllAsync());
             ViewBag.MakesSelectList = new SelectList(items.OrderBy(i => i.Name), "Id", "Name", selectedVehicleMake);
         }
 

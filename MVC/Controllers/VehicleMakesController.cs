@@ -31,11 +31,7 @@ namespace MVC.Controllers
             ViewBag.Paging = paging;
             ViewBag.PageSize = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 }, paging.PageSize);
 
-            var makes = await _vehicleService.GetPagedMakes(filtering, sorting, paging);
-            if (makes.TotalItemCount == 0)
-            {
-                Response.StatusCode = (int)HttpStatusCode.NotFound;
-            }
+            var makes = await _vehicleService.GetPagedMakesAsync(filtering, sorting, paging);
             var viewModel = _mapper.Map<IPagedList<IVehicleMake>, IPagedList<VehicleMakeViewModel>>(makes);
             return View(viewModel);            
         }
@@ -46,14 +42,13 @@ namespace MVC.Controllers
             {
                 return BadRequest();
             }
-
-            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
-            if (vehicleMakeDTO == null)
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            if (vehicleMake == null)
             {
                 return NotFound();
             }
 
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
             return View(viewModel);
         }
 
@@ -71,8 +66,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleMakeDTO = _mapper.Map<IVehicleMake>(viewModel);
-                    _vehicleService.InsertMake(vehicleMakeDTO);
-                    await _vehicleService.SaveAsync();
+                    await _vehicleService.InsertMakeAsync(vehicleMakeDTO);
                     return RedirectToAction("Index");
                 }
             }
@@ -91,12 +85,12 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
-            if (vehicleMakeDTO == null)
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            if (vehicleMake == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
             return View(viewModel);           
         }
 
@@ -109,8 +103,7 @@ namespace MVC.Controllers
                 if (ModelState.IsValid)
                 {
                     var vehicleMakeDTO = _mapper.Map<IVehicleMake>(viewModel);
-                    _vehicleService.UpdateMake(vehicleMakeDTO);
-                    await _vehicleService.SaveAsync();
+                    await _vehicleService.UpdateMakeAsync(vehicleMakeDTO);
                     return RedirectToAction("Index");
                 }
             }
@@ -130,15 +123,15 @@ namespace MVC.Controllers
             }
             if (saveChangesError.GetValueOrDefault())
             {
-                Response.StatusCode = (int)HttpStatusCode.Conflict;
+                Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
-            var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
-            if (vehicleMakeDTO == null)
+            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            if (vehicleMake == null)
             {
                 return NotFound();
             }
-            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMakeDTO);
+            var viewModel = _mapper.Map<VehicleMakeViewModel>(vehicleMake);
             return View(viewModel);  
         }
 
@@ -148,13 +141,12 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleMakeDTO = await _vehicleService.GetMakeByIdAsync(id);
-                if (vehicleMakeDTO == null)
+                var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+                if (vehicleMake == null)
                 {
                     return NotFound();
                 }
-                await _vehicleService.MakeRepository.DeleteAsync(id);
-                await _vehicleService.SaveAsync();
+                await _vehicleService.MakeRepository.DeleteAsync(vehicleMake);
             }         
             catch (DbUpdateException)
             {
