@@ -6,7 +6,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using MVC.Models;
 using MVC.ViewModels;
 using Service.DAL;
 
@@ -32,8 +31,8 @@ namespace MVC.Controllers
         {
             var model = new DatabaseInfoViewModel()
             {
-                MakeCount = await _vehicleService.MakeRepository.GetCountAsync(),
-                ModelCount = await _vehicleService.ModelRepository.GetCountAsync()
+                MakeCount = await _vehicleService.GetMakesCountAsync(),
+                ModelCount = await _vehicleService.GetModelCountAsync()
             };
             return View(model);
         }
@@ -42,12 +41,6 @@ namespace MVC.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            _vehicleService.Dispose();
-            base.Dispose(disposing);
-        }
+        }        
     }
 }

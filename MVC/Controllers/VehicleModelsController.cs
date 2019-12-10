@@ -11,6 +11,7 @@ using MVC.Models;
 using MVC.ViewModels;
 using Service.DAL;
 using Service.EFModels;
+using Service.Models;
 using X.PagedList;
 
 namespace MVC.Controllers
@@ -34,7 +35,12 @@ namespace MVC.Controllers
             ViewBag.PageSize = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 }, paging.PageSize);
 
             await PopulateMakesSelectListAsync(filtering.FilterById);
-            var models = await _vehicleService.GetPagedModelsAsync(filtering, sorting, paging);
+
+            var filterDTO = _mapper.Map<IFilteringModel>(filtering);
+            var sortDTO = _mapper.Map<ISortingModel>(sorting);
+            var pagingDTO = _mapper.Map<IPagingModel>(paging);
+
+            var models = await _vehicleService.GetPagedModelsAsync(filterDTO, sortDTO, pagingDTO);
             var viewModel = _mapper.Map<IPagedList<IVehicleModel>, IPagedList<VehicleModelViewModel>>(models);
             return View(viewModel);            
         }
@@ -148,12 +154,12 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleModel = await _vehicleService.ModelRepository.GetByIdAsync(id);
+                var vehicleModel = await _vehicleService.GetModelByIdAsync(id);
                 if (vehicleModel == null)
                 {
                     return NotFound();
                 }
-                await _vehicleService.ModelRepository.DeleteAsync(vehicleModel);
+                await _vehicleService.DeleteModelAsync(vehicleModel);
             }
             catch (DbUpdateException)
             {
@@ -164,14 +170,8 @@ namespace MVC.Controllers
 
         private async Task PopulateMakesSelectListAsync(object selectedVehicleMake = null)
         {
-            var items = _mapper.Map<IEnumerable<VehicleMakeDropListModel>>(await _vehicleService.MakeRepository.GetAllAsync());
+            var items = _mapper.Map<IEnumerable<VehicleMakeDropListModel>>(await _vehicleService.GetMakesAsync());
             ViewBag.MakesSelectList = new SelectList(items.OrderBy(i => i.Name), "Id", "Name", selectedVehicleMake);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            _vehicleService.Dispose();
-            base.Dispose(disposing);
         }
     }
 }

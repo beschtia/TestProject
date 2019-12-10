@@ -12,8 +12,7 @@ namespace Service.DAL
     {
         Task<List<TEntity>> GetAllAsync(
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
-            string includeProperties = null);
-               
+            string includeProperties = null);               
         Task<IPagedList<TEntity>> GetPagedAsync(
             int pageNumber,
             int pageSize,

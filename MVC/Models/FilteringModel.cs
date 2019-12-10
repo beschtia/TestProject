@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MVC.Models
 {
-    public class FilteringModel : IFilteringModel
+    public class FilteringModel
     {
         public FilteringModel()
         {

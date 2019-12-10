@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MVC.Models
 {
-    public class PagingModel : IPagingModel
+    public class PagingModel
     {
         public PagingModel()
         {

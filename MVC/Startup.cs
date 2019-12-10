@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Autofac;
 using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -33,8 +34,12 @@ namespace MVC
             services.AddDbContext<ProjectContext>(options =>
             options.UseSqlServer(@"Data Source=DESKTOP-39QG36S\SQLEXPRESS;Initial Catalog=project;Integrated Security=True"));
 
-            services.AddScoped<IVehicleService, VehicleService>();
-            services.AddAutoMapper(typeof(ProjectMapProfile));
+            services.AddAutoMapper(typeof(ProjectMapProfile));         
+        }
+
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+            builder.RegisterModule(new AutofacModule());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

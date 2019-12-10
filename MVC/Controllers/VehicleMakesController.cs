@@ -10,6 +10,7 @@ using MVC.Models;
 using MVC.ViewModels;
 using Service.DAL;
 using Service.EFModels;
+using Service.Models;
 using X.PagedList;
 
 namespace MVC.Controllers
@@ -31,7 +32,11 @@ namespace MVC.Controllers
             ViewBag.Paging = paging;
             ViewBag.PageSize = new SelectList(new List<int> { 2, 5, 10, 25, 50, 100 }, paging.PageSize);
 
-            var makes = await _vehicleService.GetPagedMakesAsync(filtering, sorting, paging);
+            var filterDTO = _mapper.Map<IFilteringModel>(filtering);
+            var sortDTO = _mapper.Map<ISortingModel>(sorting);
+            var pagingDTO = _mapper.Map<IPagingModel>(paging);
+
+            var makes = await _vehicleService.GetPagedMakesAsync(filterDTO, sortDTO, pagingDTO);
             var viewModel = _mapper.Map<IPagedList<IVehicleMake>, IPagedList<VehicleMakeViewModel>>(makes);
             return View(viewModel);            
         }
@@ -42,7 +47,7 @@ namespace MVC.Controllers
             {
                 return BadRequest();
             }
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.GetMakeByIdAsync(id);
             if (vehicleMake == null)
             {
                 return NotFound();
@@ -85,7 +90,7 @@ namespace MVC.Controllers
                 return BadRequest();
             }
 
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.GetMakeByIdAsync(id);
             if (vehicleMake == null)
             {
                 return NotFound();
@@ -126,7 +131,7 @@ namespace MVC.Controllers
                 Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 ViewBag.ErrorMessage = "Delete failed. Try again, and if the problem persists see your system administrator.";
             }
-            var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+            var vehicleMake = await _vehicleService.GetMakeByIdAsync(id);
             if (vehicleMake == null)
             {
                 return NotFound();
@@ -141,24 +146,18 @@ namespace MVC.Controllers
         {
             try
             {
-                var vehicleMake = await _vehicleService.MakeRepository.GetByIdAsync(id);
+                var vehicleMake = await _vehicleService.GetMakeByIdAsync(id);
                 if (vehicleMake == null)
                 {
                     return NotFound();
                 }
-                await _vehicleService.MakeRepository.DeleteAsync(vehicleMake);
+                await _vehicleService.DeleteMakeAsync(vehicleMake);
             }         
             catch (DbUpdateException)
             {
                 return RedirectToAction("Delete", new { id, saveChangesError = true });
             }
             return RedirectToAction("Index");
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            _vehicleService.Dispose();
-            base.Dispose(disposing);
         }
     }
 }

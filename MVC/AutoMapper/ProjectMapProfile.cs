@@ -3,6 +3,7 @@ using MVC.Models;
 using MVC.ViewModels;
 using Service;
 using Service.EFModels;
+using Service.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,6 +33,10 @@ namespace MVC.AutoMapper
                 .ForMember(dest => dest.Name,
                             opts => opts.MapFrom(
                                 src => string.Format("{0} ({1})", src.Name, src.Abrv)));
+
+            CreateMap<FilteringModel, IFilteringModel>();
+            CreateMap<PagingModel, IPagingModel>();
+            CreateMap<SortingModel, ISortingModel>();
         }
     }
 }
